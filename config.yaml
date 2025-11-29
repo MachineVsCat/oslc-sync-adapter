@@ -1,0 +1,19 @@
+jazz_server:
+  url: "https://elm.example.com/jts"
+  username: "${ELM_USER}"
+  password: "${ELM_PASS}"
+  verify_ssl: true
+
+doors_next:
+  catalog_url: "https://elm.example.com/rm/oslc_rm/catalog"
+  project_area: "https://elm.example.com/rm/process/project-areas/_default"
+
+sync_rules:
+  - source: doors_next
+    target: jira
+    mapping:
+      dcterms:title: summary
+      dcterms:description: description
+      dcterms:identifier: customfield_10001
+    direction: bidirectional
+    conflict_resolution: source_wins
