@@ -1,12 +1,13 @@
 """Base OSLC client for IBM Jazz platform authentication and resource queries."""
 
 import requests
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 from lxml import etree
 
 OSLC_CORE_NS = "http://open-services.net/ns/core#"
 DCTERMS_NS = "http://purl.org/dc/terms/"
 OSLC_RM_NS = "http://open-services.net/ns/rm#"
+RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 
 
 class JazzAuthError(Exception):
@@ -43,20 +44,24 @@ class OSLCClient:
         })
         resp.raise_for_status()
         tree = etree.fromstring(resp.content)
-        providers = tree.findall(f".//{{{OSLC_CORE_NS}}}ServiceProvider")
+        providers = tree.findall(
+            f".//{{{OSLC_CORE_NS}}}ServiceProvider"
+        )
         results = []
         for sp in providers:
-            title = sp.find(f"{{{DCTERMS_NS}}}title")
-            about = sp.get(f"{{{OSLC_CORE_NS}}}about", sp.get("rdf:about", ""))
+            title_el = sp.find(f"{{{DCTERMS_NS}}}title")
+            about = sp.get(f"{{{RDF_NS}}}about", "")
+            if not about:
+                about = sp.attrib.get("rdf:about", "")
             results.append({
-                "title": title.text if title is not None else "",
+                "title": title_el.text if title_el is not None else "",
                 "url": about,
             })
         return results
 
-    def query_resources(self, query_url, select=None, where=None):
+    def query_resources(self, query_url, select=None, where=None, page_size=100):
         """Execute OSLC query with optional select and where clauses."""
-        params = {}
+        params = {"oslc.pageSize": str(page_size)}
         if select:
             params["oslc.select"] = select
         if where:
@@ -69,7 +74,7 @@ class OSLCClient:
         return resp.json()
 
     def get_resource(self, resource_url):
-        """Fetch a single OSLC resource."""
+        """Fetch a single OSLC resource by URL."""
         resp = self.session.get(resource_url, headers={
             "Accept": "application/rdf+xml",
             "OSLC-Core-Version": "2.0",
@@ -78,7 +83,7 @@ class OSLCClient:
         return etree.fromstring(resp.content)
 
     def update_resource(self, resource_url, payload, etag=None):
-        """Update an OSLC resource using PUT."""
+        """Update an OSLC resource using PUT with optional ETag."""
         headers = {
             "Content-Type": "application/rdf+xml",
             "OSLC-Core-Version": "2.0",
