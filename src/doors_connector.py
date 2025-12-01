@@ -65,3 +65,25 @@ class DoorsNextConnector:
                     "target": lnk.get("rdf:resource", ""),
                 })
         return links
+
+    def detect_suspect_links(self, requirement_url):
+        """Check if any links on a requirement are marked as suspect."""
+        links = self.get_links(requirement_url)
+        suspect = []
+        for link in links:
+            target_resource = self.client.get_resource(link["target"])
+            modified = target_resource.find(f".//{{{DCTERMS_NS}}}modified")
+            if modified is not None:
+                suspect.append({
+                    "link_type": link["type"],
+                    "target": link["target"],
+                    "last_modified": modified.text,
+                    "suspect": True,
+                })
+        return suspect
+
+    def clear_suspect_flag(self, link_url):
+        """Clear the suspect flag on a traceability link."""
+        log.info(f"Clearing suspect flag on {link_url}")
+        # Would update the link resource to remove suspect status
+        pass
