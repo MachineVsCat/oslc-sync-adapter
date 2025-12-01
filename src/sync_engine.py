@@ -25,7 +25,11 @@ class SyncEngine:
         mapping = rule["mapping"]
         direction = rule.get("direction", "source_to_target")
         conflict_mode = rule.get("conflict_resolution", "source_wins")
-        source_items = source_connector.get_requirements()
+        try:
+            source_items = source_connector.get_requirements()
+        except Exception as e:
+            log.error(f"Failed to fetch source items: {e}")
+            return self.sync_log
         log.info(f"Fetched {len(source_items)} items from source")
 
         for item in source_items:
