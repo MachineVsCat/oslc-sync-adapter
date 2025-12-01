@@ -1,5 +1,7 @@
 """Base OSLC client for IBM Jazz platform authentication and resource queries."""
 
+import time
+import logging
 import requests
 from urllib.parse import urljoin, urlencode
 from lxml import etree
@@ -9,18 +11,26 @@ DCTERMS_NS = "http://purl.org/dc/terms/"
 OSLC_RM_NS = "http://open-services.net/ns/rm#"
 RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 
+log = logging.getLogger(__name__)
+
+DEFAULT_RETRY_COUNT = 3
+DEFAULT_RETRY_DELAY = 2
+
 
 class JazzAuthError(Exception):
     pass
 
 
 class OSLCClient:
-    def __init__(self, server_url, username, password, verify_ssl=True):
+    def __init__(self, server_url, username, password, verify_ssl=True,
+                 max_retries=DEFAULT_RETRY_COUNT, retry_delay=DEFAULT_RETRY_DELAY):
         self.server_url = server_url.rstrip("/")
         self.session = requests.Session()
         self.session.verify = verify_ssl
         self.username = username
         self.password = password
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
         self._authenticated = False
 
     def authenticate(self):
@@ -36,9 +46,26 @@ class OSLCClient:
         self._authenticated = True
         return True
 
+    def _request_with_retry(self, method, url, **kwargs):
+        """Execute HTTP request with retry on timeout/5xx errors."""
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                resp = getattr(self.session, method)(url, **kwargs)
+                if resp.status_code >= 500:
+                    log.warning(f"Server error {resp.status_code} on attempt {attempt + 1}")
+                    time.sleep(self.retry_delay * (attempt + 1))
+                    continue
+                return resp
+            except (requests.Timeout, requests.ConnectionError) as e:
+                last_error = e
+                log.warning(f"Request failed (attempt {attempt + 1}/{self.max_retries}): {e}")
+                time.sleep(self.retry_delay * (attempt + 1))
+        raise last_error or requests.ConnectionError("Max retries exceeded")
+
     def get_service_providers(self, catalog_url):
         """Discover OSLC service providers from catalog."""
-        resp = self.session.get(catalog_url, headers={
+        resp = self._request_with_retry("get", catalog_url, headers={
             "Accept": "application/rdf+xml",
             "OSLC-Core-Version": "2.0",
         })
@@ -66,16 +93,40 @@ class OSLCClient:
             params["oslc.select"] = select
         if where:
             params["oslc.where"] = where
-        resp = self.session.get(query_url, params=params, headers={
+        resp = self._request_with_retry("get", query_url, params=params, headers={
             "Accept": "application/json",
             "OSLC-Core-Version": "2.0",
         })
         resp.raise_for_status()
         return resp.json()
 
+    def query_all_pages(self, query_url, select=None, where=None, page_size=100):
+        """Fetch all pages of an OSLC query result."""
+        all_results = []
+        params = {"oslc.pageSize": str(page_size)}
+        if select:
+            params["oslc.select"] = select
+        if where:
+            params["oslc.where"] = where
+
+        next_url = query_url
+        while next_url:
+            resp = self._request_with_retry("get", next_url, params=params, headers={
+                "Accept": "application/json",
+                "OSLC-Core-Version": "2.0",
+            })
+            resp.raise_for_status()
+            data = resp.json()
+            results = data.get("oslc:results", data.get("results", []))
+            all_results.extend(results)
+            next_url = data.get("oslc:nextPage", data.get("nextPage"))
+            params = {}
+            log.info(f"Fetched page: {len(results)} items, total: {len(all_results)}")
+        return all_results
+
     def get_resource(self, resource_url):
         """Fetch a single OSLC resource by URL."""
-        resp = self.session.get(resource_url, headers={
+        resp = self._request_with_retry("get", resource_url, headers={
             "Accept": "application/rdf+xml",
             "OSLC-Core-Version": "2.0",
         })
@@ -90,31 +141,6 @@ class OSLCClient:
         }
         if etag:
             headers["If-Match"] = etag
-        resp = self.session.put(resource_url, data=payload, headers=headers)
+        resp = self._request_with_retry("put", resource_url, data=payload, headers=headers)
         resp.raise_for_status()
         return resp
-
-    def query_all_pages(self, query_url, select=None, where=None, page_size=100):
-        """Fetch all pages of an OSLC query result."""
-        all_results = []
-        params = {"oslc.pageSize": str(page_size)}
-        if select:
-            params["oslc.select"] = select
-        if where:
-            params["oslc.where"] = where
-
-        next_url = query_url
-        while next_url:
-            resp = self.session.get(next_url, params=params, headers={
-                "Accept": "application/json",
-                "OSLC-Core-Version": "2.0",
-            })
-            resp.raise_for_status()
-            data = resp.json()
-            results = data.get("oslc:results", data.get("results", []))
-            all_results.extend(results)
-            next_url = data.get("oslc:nextPage", data.get("nextPage"))
-            params = {}  # next page URL includes params
-            log.info(f"Fetched page: {len(results)} items, total: {len(all_results)}")
-
-        return all_results
