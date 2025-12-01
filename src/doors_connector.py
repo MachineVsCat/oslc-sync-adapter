@@ -87,3 +87,22 @@ class DoorsNextConnector:
         log.info(f"Clearing suspect flag on {link_url}")
         # Would update the link resource to remove suspect status
         pass
+
+    def create_link(self, source_url, target_url, link_type="implementedBy"):
+        """Create an OSLC traceability link between resources."""
+        payload = f"""<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:oslc_rm="{OSLC_RM_NS}">
+  <rdf:Description rdf:about="{source_url}">
+    <oslc_rm:{link_type} rdf:resource="{target_url}"/>
+  </rdf:Description>
+</rdf:RDF>"""
+        resource = self.client.get_resource(source_url)
+        etag = None  # would extract from response headers
+        return self.client.update_resource(source_url, payload, etag)
+
+    def remove_link(self, source_url, target_url, link_type):
+        """Remove a traceability link from a requirement."""
+        log.info(f"Removing {link_type} link: {source_url} -> {target_url}")
+        # Would PATCH the resource to remove the link triple
+        pass
