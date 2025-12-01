@@ -59,7 +59,7 @@ class OSLCClient:
             })
         return results
 
-    def query_resources(self, query_url, select=None, where=None, page_size=100):
+    def query_resources(self, query_url, select=None, where=None, page_size=100, fetch_all=False):
         """Execute OSLC query with optional select and where clauses."""
         params = {"oslc.pageSize": str(page_size)}
         if select:
@@ -93,3 +93,28 @@ class OSLCClient:
         resp = self.session.put(resource_url, data=payload, headers=headers)
         resp.raise_for_status()
         return resp
+
+    def query_all_pages(self, query_url, select=None, where=None, page_size=100):
+        """Fetch all pages of an OSLC query result."""
+        all_results = []
+        params = {"oslc.pageSize": str(page_size)}
+        if select:
+            params["oslc.select"] = select
+        if where:
+            params["oslc.where"] = where
+
+        next_url = query_url
+        while next_url:
+            resp = self.session.get(next_url, params=params, headers={
+                "Accept": "application/json",
+                "OSLC-Core-Version": "2.0",
+            })
+            resp.raise_for_status()
+            data = resp.json()
+            results = data.get("oslc:results", data.get("results", []))
+            all_results.extend(results)
+            next_url = data.get("oslc:nextPage", data.get("nextPage"))
+            params = {}  # next page URL includes params
+            log.info(f"Fetched page: {len(results)} items, total: {len(all_results)}")
+
+        return all_results
