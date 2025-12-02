@@ -46,7 +46,7 @@ class LQEReporter:
         resp = self.client._request_with_retry(
             "post",
             f"{self.lqe_url}/sparql",
-            data=query,
+            data=query.encode("utf-8"),
             headers={
                 "Content-Type": "application/sparql-query",
                 "Accept": "application/json",
