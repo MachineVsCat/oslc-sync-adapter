@@ -17,3 +17,21 @@ sync_rules:
       dcterms:identifier: customfield_10001
     direction: bidirectional
     conflict_resolution: source_wins
+
+gcm:
+  enabled: true
+  server_url: "https://elm.example.com/gc"
+  default_stream: "main"
+
+ewm:
+  project_area: "https://elm.example.com/ccm/process/project-areas/_default"
+  work_item_types: ["defect", "task", "story"]
+
+etm:
+  project_area: "https://elm.example.com/qm/process/project-areas/_default"
+
+jira:
+  base_url: "https://company.atlassian.net"
+  project_key: "ENG"
+  username: "${JIRA_USER}"
+  api_token: "${JIRA_TOKEN}"

@@ -68,3 +68,14 @@ def _validate_config(config):
         conflict = rule.get("conflict_resolution", "source_wins")
         if conflict not in VALID_CONFLICT_MODES:
             raise ConfigError(f"sync_rules[{i}]: invalid conflict_resolution '{conflict}'")
+
+
+def get_gcm_config(config):
+    """Extract Global Configuration Management settings."""
+    gcm = config.get("gcm", {})
+    if not gcm.get("enabled", False):
+        return None
+    return {
+        "server_url": gcm["server_url"],
+        "stream": gcm.get("default_stream", "main"),
+    }
