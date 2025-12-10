@@ -106,3 +106,29 @@ class DoorsNextConnector:
         log.info(f"Removing {link_type} link: {source_url} -> {target_url}")
         # Would PATCH the resource to remove the link triple
         pass
+
+    def get_baselines(self, stream_url=None):
+        """Retrieve available baselines for a configuration context."""
+        url = stream_url or self.project_area_url
+        resource = self.client.get_resource(f"{url}/baselines")
+        baselines = []
+        for bl in resource.findall(".//{http://open-services.net/ns/config#}Baseline"):
+            title = bl.find(f"{{{DCTERMS_NS}}}title")
+            created = bl.find(f"{{{DCTERMS_NS}}}created")
+            baselines.append({
+                "url": bl.get("rdf:about", ""),
+                "title": title.text if title is not None else "",
+                "created": created.text if created is not None else "",
+            })
+        return baselines
+
+    def compare_baselines(self, baseline_a, baseline_b):
+        """Compare two baselines and return changed requirements."""
+        reqs_a = set(r.get("uri") for r in self.get_module_structure(baseline_a))
+        reqs_b = set(r.get("uri") for r in self.get_module_structure(baseline_b))
+        return {
+            "added": list(reqs_b - reqs_a),
+            "removed": list(reqs_a - reqs_b),
+            "baseline_a": baseline_a,
+            "baseline_b": baseline_b,
+        }
