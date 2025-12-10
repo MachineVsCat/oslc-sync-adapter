@@ -32,6 +32,8 @@ class OSLCClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self._authenticated = False
+        self._auth_time = 0
+        self._token_ttl = 3600  # 1 hour default
 
     def authenticate(self):
         """Perform Jazz Form-based authentication."""
@@ -44,6 +46,7 @@ class OSLCClient:
         if "authfailed" in resp.url or resp.status_code == 401:
             raise JazzAuthError(f"Authentication failed for {self.username}")
         self._authenticated = True
+        self._auth_time = time.time()
         return True
 
     def _request_with_retry(self, method, url, **kwargs):
@@ -144,3 +147,9 @@ class OSLCClient:
         resp = self._request_with_retry("put", resource_url, data=payload, headers=headers)
         resp.raise_for_status()
         return resp
+
+    def _ensure_authenticated(self):
+        """Re-authenticate if session token has expired."""
+        if not self._authenticated or (time.time() - self._auth_time) > self._token_ttl:
+            log.info("Session expired, re-authenticating with Jazz server")
+            self.authenticate()
