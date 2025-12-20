@@ -93,3 +93,31 @@ class DO178CReport(TraceabilityReport):
                     "missing": "implementation_link",
                 })
         return gaps
+
+
+class ISO26262Report(TraceabilityReport):
+    """ISO 26262 specific reporting for automotive safety."""
+
+    ASIL_LEVELS = ["QM", "A", "B", "C", "D"]
+
+    def generate_safety_report(self, project_area, asil_level="D"):
+        """Generate ISO 26262 safety requirements coverage report."""
+        matrix = self.generate_matrix(project_area)
+        coverage = self.coverage_summary()
+        return {
+            "standard": "ISO 26262",
+            "asil_level": asil_level,
+            "generated_at": datetime.utcnow().isoformat(),
+            "total_requirements": len(matrix) if not isinstance(matrix, str) else 0,
+            "untested": coverage["untested_count"],
+            "coverage_pct": self._calc_coverage(matrix, coverage),
+        }
+
+    def _calc_coverage(self, matrix, coverage):
+        if isinstance(matrix, str):
+            return 0.0
+        total = len(matrix)
+        if total == 0:
+            return 100.0
+        tested = total - coverage["untested_count"]
+        return round((tested / total) * 100, 2)
