@@ -45,3 +45,51 @@ class TraceabilityReport:
                 row["validated_by"],
             ])
         return output.getvalue()
+
+
+class DO178CReport(TraceabilityReport):
+    """DO-178C specific traceability reporting for aerospace compliance."""
+
+    TRACE_LEVELS = [
+        "system_req_to_hlr",
+        "hlr_to_llr",
+        "llr_to_source",
+        "source_to_test",
+        "test_to_result",
+    ]
+
+    def generate_do178c_matrix(self, project_area):
+        """Generate DO-178C compliant traceability matrix."""
+        matrix = self.generate_matrix(project_area)
+        report = {
+            "standard": "DO-178C",
+            "level": "A",
+            "generated_at": datetime.utcnow().isoformat(),
+            "traceability_data": matrix,
+            "coverage": self.coverage_summary(),
+        }
+
+        gaps = self._find_traceability_gaps(matrix)
+        report["gaps"] = gaps
+        report["compliant"] = len(gaps) == 0
+        return report
+
+    def _find_traceability_gaps(self, matrix):
+        """Identify missing links required by DO-178C."""
+        gaps = []
+        if isinstance(matrix, str):
+            return gaps
+        for row in matrix:
+            if not row.get("validated_by"):
+                gaps.append({
+                    "requirement": row["requirement"],
+                    "title": row["title"],
+                    "missing": "test_coverage",
+                })
+            if not row.get("implemented_by"):
+                gaps.append({
+                    "requirement": row["requirement"],
+                    "title": row["title"],
+                    "missing": "implementation_link",
+                })
+        return gaps
