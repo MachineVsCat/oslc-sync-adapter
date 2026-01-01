@@ -134,7 +134,9 @@ class OSLCClient:
             "OSLC-Core-Version": "2.0",
         })
         resp.raise_for_status()
-        return etree.fromstring(resp.content)
+        # Handle mixed encodings from Jazz server
+        content = resp.content
+        return etree.fromstring(content)
 
     def update_resource(self, resource_url, payload, etag=None):
         """Update an OSLC resource using PUT with optional ETag."""
