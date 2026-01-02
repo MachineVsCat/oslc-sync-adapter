@@ -60,3 +60,12 @@ class EWMConnector:
             parts.append(f"  <{key}>{val}</{key}>")
         parts.append("</rdf:RDF>")
         return "\n".join(parts)
+
+    def test_connection(self):
+        """Test EWM connectivity."""
+        try:
+            self.get_work_items()
+            return True
+        except Exception as e:
+            log.error(f"EWM connection test failed: {e}")
+            return False

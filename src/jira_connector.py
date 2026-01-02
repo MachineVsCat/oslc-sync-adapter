@@ -22,6 +22,8 @@ class JiraConnector:
             f"{self.base_url}/rest/api/2/search",
             params={"jql": jql, "maxResults": max_results},
         )
+        if resp.status_code == 401:
+            log.error("Jira authentication failed - check API token")
         resp.raise_for_status()
         return resp.json().get("issues", [])
 
@@ -30,6 +32,8 @@ class JiraConnector:
         resp = self.session.get(
             f"{self.base_url}/rest/api/2/issue/{issue_key}"
         )
+        if resp.status_code == 401:
+            log.error("Jira authentication failed - check API token")
         resp.raise_for_status()
         return resp.json()
 
@@ -46,6 +50,8 @@ class JiraConnector:
             f"{self.base_url}/rest/api/2/issue",
             json=payload,
         )
+        if resp.status_code == 401:
+            log.error("Jira authentication failed - check API token")
         resp.raise_for_status()
         return resp.json()["key"]
 
@@ -55,6 +61,8 @@ class JiraConnector:
             f"{self.base_url}/rest/api/2/issue/{issue_key}",
             json={"fields": fields},
         )
+        if resp.status_code == 401:
+            log.error("Jira authentication failed - check API token")
         resp.raise_for_status()
         log.info(f"Updated Jira issue {issue_key}")
 
@@ -63,3 +71,12 @@ class JiraConnector:
         jql = f'"{field_name}" ~ "{value}" AND project = {self.project_key}'
         issues = self.get_issues(jql=jql, max_results=1)
         return issues[0]["key"] if issues else None
+
+    def test_connection(self):
+        """Test Jira connectivity and permissions."""
+        try:
+            self.get_issues(max_results=1)
+            return True
+        except Exception as e:
+            log.error(f"Jira connection test failed: {e}")
+            return False
