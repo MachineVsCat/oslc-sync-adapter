@@ -27,6 +27,12 @@ def load_config(config_path):
 
     config = _resolve_env_vars(config)
     _validate_config(config)
+        # Warn on missing optional sections
+    optional = ["ewm", "etm", "jira", "gcm"]
+    for key in optional:
+        if key not in config:
+            log.info(f"Optional config section not present: {key}")
+
     return config
 
 
@@ -42,6 +48,12 @@ def _resolve_env_vars(config):
         if value is None:
             log.warning(f"Environment variable {var_name} not set")
         return value or config
+        # Warn on missing optional sections
+    optional = ["ewm", "etm", "jira", "gcm"]
+    for key in optional:
+        if key not in config:
+            log.info(f"Optional config section not present: {key}")
+
     return config
 
 
