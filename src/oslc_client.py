@@ -4,6 +4,7 @@ import time
 import logging
 import requests
 from urllib.parse import urljoin, urlencode
+from requests.adapters import HTTPAdapter
 from lxml import etree
 
 OSLC_CORE_NS = "http://open-services.net/ns/core#"
@@ -27,6 +28,9 @@ class OSLCClient:
         self.server_url = server_url.rstrip("/")
         self.session = requests.Session()
         self.session.verify = verify_ssl
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         self.username = username
         self.password = password
         self.max_retries = max_retries
